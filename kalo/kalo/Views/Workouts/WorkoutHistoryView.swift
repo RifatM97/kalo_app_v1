@@ -1,0 +1,244 @@
+import SwiftUI
+
+/// Comprehensive workout history view with filtering, search, and statistics
+struct WorkoutHistoryView: View {
+    @State var workoutVM: WorkoutViewModel
+    @State private var selectedExerciseFilter = ""
+    @State private var searchText = ""
+    @State private var isLoading = false
+    @State private var selectedWorkoutDetail: Workout?
+    
+    var filteredWorkouts: [Workout] {
+        var filtered = workoutVM.workouts
+        
+        // Filter by exercise name if selected
+        if !selectedExerciseFilter.isEmpty {
+            filtered = filtered.filter { $0.exerciseName.lowercased() == selectedExerciseFilter.lowercased() }
+        }
+        // Filter by search text
+        if !searchText.isEmpty {
+            filtered = filtered.filter {
+                $0.exerciseName.localizedCaseInsensitiveContains(searchText) ||
+                ($0.notes ?? "").localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        return filtered.sorted { $0.date > $1.date }
+    }
+    
+    var uniqueExercises: [String] {
+        Array(Set(workoutVM.workouts.map { $0.exerciseName })).sorted()
+    }
+    
+    var totalVolume: Double {
+        filteredWorkouts.reduce(0) { total, workout in
+            let weight = workout.weight ?? 0
+            return total + Double(workout.sets * workout.reps) * weight
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.gray.opacity(0.15)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Workout History")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(KaloTheme.text)
+                        
+                        Text("\(filteredWorkouts.count) workouts • \(Int(totalVolume)) lbs total")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.white)
+                    
+                    // Search Bar
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                        TextField("Search exercises", text: $searchText)
+                            .textFieldStyle(.plain)
+                        if !searchText.isEmpty {
+                            Button(action: { searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(10)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    
+                    // Filter Pills
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            // All filter
+                            FilterPill(
+                                label: "All",
+                                isSelected: selectedExerciseFilter.isEmpty,
+                                action: { selectedExerciseFilter = "" }
+                            )
+                            
+                            // Exercise filters
+                            ForEach(uniqueExercises, id: \.self) { exercise in
+                                FilterPill(
+                                    label: exercise,
+                                    isSelected: selectedExerciseFilter == exercise,
+                                    action: { selectedExerciseFilter = exercise }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    // Content
+                    if filteredWorkouts.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "calendar.badge.exclamationmark")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+                            Text("No Workouts Found")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(KaloTheme.text)
+                            Text(searchText.isEmpty ? "Start logging your exercises" : "Try adjusting your filters")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxHeight: .infinity)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach(filteredWorkouts, id: \.id) { workout in
+                                    WorkoutHistoryCard(
+                                        workout: workout,
+                                        isPersonalRecord: workoutVM.personalRecords[workout.exerciseName.lowercased()]?.maxWeight == workout.weight,
+                                        onDelete: {
+                                            Task { @MainActor in
+                                                await workoutVM.deleteWorkout(workout)
+                                            }
+                                        },
+                                        onTap: {
+                                            selectedWorkoutDetail = workout
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(16)
+                        }
+                    }
+                }
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .sheet(item: $selectedWorkoutDetail) { workout in
+                WorkoutDetailView(workoutVM: workoutVM, workout: workout)
+            }
+            .refreshable {
+                await loadWorkouts()
+            }
+        }
+    }
+    
+    @MainActor private func loadWorkouts() async {
+        isLoading = true
+        await workoutVM.loadWorkouts()
+        isLoading = false
+    }
+}
+
+/// Filter pill component
+struct FilterPill: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(isSelected ? .white : KaloTheme.text)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? KaloTheme.mint : Color.gray.opacity(0.15))
+                .cornerRadius(20)
+        }
+    }
+}
+
+/// Workout history card with PR indicator
+struct WorkoutHistoryCard: View {
+    let workout: Workout
+    let isPersonalRecord: Bool
+    let onDelete: () -> Void
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Icon
+                VStack {
+                    Image(systemName: "dumbbell")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 40, height: 40)
+                        .background(isPersonalRecord ? Color(red: 1.0, green: 0.8, blue: 0.0) : KaloTheme.mint)
+                        .cornerRadius(10)
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(workout.exerciseName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(KaloTheme.text)
+                        if isPersonalRecord {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.0))
+                        }
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Text("\(workout.sets)×\(workout.reps)")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                        if let weight = workout.weight {
+                            Text("\(Int(weight)) lbs")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Text(workout.date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(KaloTheme.mint)
+                    }
+                }
+                
+                // Delete Button
+                Button(action: onDelete) {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(KaloTheme.text)
+                        .opacity(0.6)
+                }
+            }
+            .padding(12)
+            .background(Color.white)
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+#Preview {
+    WorkoutHistoryView(workoutVM: WorkoutViewModel())
+}

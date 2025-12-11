@@ -1,0 +1,163 @@
+# docker-compose.yml - Complete production setup for Kalo backend
+
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: kalo-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-kalo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure-password-change-me}
+      POSTGRES_DB: ${DB_NAME:-kalo_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-kalo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kalo-network
+
+  # Redis for task queue and caching
+  redis:
+    image: redis:7-alpine
+    container_name: kalo-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis-password-change-me}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kalo-network
+
+  # FastAPI Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kalo-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-kalo}:${DB_PASSWORD:-secure-password-change-me}@postgres:5432/${DB_NAME:-kalo_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-3.5-turbo}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-False}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./temp_media:/app/temp_media
+      - ./logs:/app/logs
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - kalo-network
+    restart: unless-stopped
+
+  # Celery Worker (Background Tasks)
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kalo-celery-worker
+    command: celery -A app.ai.tasks worker --loglevel=info --concurrency=2
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-kalo}:${DB_PASSWORD:-secure-password-change-me}@postgres:5432/${DB_NAME:-kalo_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-3.5-turbo}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    depends_on:
+      - postgres
+      - redis
+      - api
+    volumes:
+      - ./temp_media:/app/temp_media
+      - ./logs:/app/logs
+      - ./models:/app/models
+    networks:
+      - kalo-network
+    restart: unless-stopped
+
+  # Celery Beat (Scheduled Tasks)
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kalo-celery-beat
+    command: celery -A app.ai.tasks beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-kalo}:${DB_PASSWORD:-secure-password-change-me}@postgres:5432/${DB_NAME:-kalo_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - kalo-network
+    restart: unless-stopped
+
+  # Flower (Celery Monitoring)
+  flower:
+    image: mher/flower:2.0
+    container_name: kalo-flower
+    command: celery -A app.ai.tasks flower --port=5555 --broker=redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+    environment:
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-redis-password-change-me}@redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    networks:
+      - kalo-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: kalo-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - kalo-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  kalo-network:
+    driver: bridge

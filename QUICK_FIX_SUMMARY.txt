@@ -1,0 +1,60 @@
+# 🎯 QUICK FIX SUMMARY
+
+## Problem
+TikTok/video links returning garbage like "cake with dining table" instead of actual recipes.
+
+## Root Cause
+Backend was NOT using OpenAI Vision - only sending text (transcript + OCR + detected objects) to GPT, not the actual video frames as images.
+
+## Solution
+Modified `RecipeStructurer.structure_recipe()` in `/Users/rifathossain/Desktop/kalo/kalo-backend/app/ai/recipe_extractor.py` to:
+1. Accept `frame_paths` parameter
+2. Select 8 evenly distributed frames from video
+3. Convert frames to base64 images
+4. Send frames as `image_url` entries to GPT-4o Vision API
+5. Use stronger prompt with hallucination detection
+6. Lower temperature (0.2) for less hallucination
+
+## Files Changed
+- **Backend**: `app/ai/recipe_extractor.py` (~200 lines modified)
+- **iOS**: `ViewModels/RecipeExtractionViewModel.swift` (fixed Sendable warning)
+
+## Testing
+
+### Option 1: Test Script (Easiest)
+```bash
+cd /Users/rifathossain/Desktop/kalo
+/Users/rifathossain/Desktop/kalo/.venv/bin/python test_extraction_fix.py
+```
+
+### Option 2: iOS App
+1. Start backend: `./start_backend.sh`
+2. Open Xcode: `open kalo/kalo.xcodeproj`
+3. Build & Run (⌘ + R)
+4. Paste TikTok URL in Recipe Extraction view
+5. Wait 30-90 seconds
+6. View correct recipe (not "cake with dining table"!)
+
+### Option 3: cURL
+```bash
+# Submit
+curl -X POST http://localhost:8000/api/ai/extract-recipe \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://www.tiktok.com/@nourishment.nutrition/video/7580846176082087198"}'
+
+# Get task_id from response, then poll:
+curl http://localhost:8000/api/ai/extract-recipe/TASK_ID/status
+```
+
+## Cost
+~$0.02-0.04 per video extraction (8 frames sent to GPT-4o Vision)
+
+## Status
+✅ **FIXED AND READY TO TEST**
+
+Backend is running on http://localhost:8000
+iOS app is ready to connect
+Test script is ready to run
+
+## Full Details
+See: `/Users/rifathossain/Desktop/kalo/AI_EXTRACTION_FIX_REPORT.md`

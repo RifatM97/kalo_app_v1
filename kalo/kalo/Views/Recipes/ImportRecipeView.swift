@@ -1,0 +1,209 @@
+import SwiftUI
+
+struct ImportRecipeView: View {
+    @State private var importVM = ImportRecipeViewModel()
+    @State private var recipeVM = RecipeViewModel()
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Import Recipe")
+                        .font(.system(size: 28, weight: .bold))
+                    
+                    Text("Paste a TikTok or Instagram URL")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // URL Input
+                VStack(spacing: 12) {
+                    TextField("Paste URL here...", text: $importVM.urlString)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                        .padding(12)
+                        .background(Color(white: 0.97))
+                        .cornerRadius(10)
+                    
+                    Button(action: {
+                        Task {
+                            await importVM.extractRecipe()
+                        }
+                    }) {
+                        if importVM.isLoading {
+                            HStack {
+                                ProgressView()
+                                    .tint(.white)
+                                Text("Extracting...")
+                            }
+                        } else {
+                            Text("Extract Recipe")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(KaloTheme.mint)
+                    .foregroundColor(.white)
+                    .cornerRadius(KaloTheme.buttonCornerRadius)
+                    .disabled(importVM.isLoading || importVM.urlString.isEmpty)
+                }
+                
+                // Error Message
+                if let error = importVM.error {
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundColor(.red)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                }
+                
+                // Recipe Preview
+                if let recipe = importVM.importedRecipe {
+                    RecipePreviewCard(recipe: recipe)
+                    
+                    Button(action: {
+                        recipeVM.saveRecipe(recipe)
+                        dismiss()
+                    }) {
+                        Text("Save Recipe")
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(KaloTheme.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(KaloTheme.buttonCornerRadius)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(KaloTheme.padding)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct RecipePreviewCard: View {
+    let recipe: Recipe
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Title & Calories
+            VStack(alignment: .leading, spacing: 4) {
+                Text(recipe.title)
+                    .font(.system(size: 20, weight: .bold))
+                
+                HStack {
+                    Label(String(format: "%.0f", recipe.calories) + " cal", systemImage: "flame.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.orange)
+                }
+            }
+            
+            // Macros
+            HStack(spacing: 12) {
+                MacroRow(label: "Protein", value: String(format: "%.0f", recipe.macros.protein) + "g")
+                MacroRow(label: "Carbs", value: String(format: "%.0f", recipe.macros.carbs) + "g")
+                MacroRow(label: "Fat", value: String(format: "%.0f", recipe.macros.fat) + "g")
+            }
+            
+            // Ingredients
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ingredients")
+                    .font(.system(size: 14, weight: .semibold))
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(recipe.ingredients.prefix(5), id: \.id) { ingredient in
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.kaloMint)
+                                .font(.system(size: 12))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ingredient.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                
+                                Text(ingredient.quantity + " " + ingredient.unit)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            
+            // Steps (if available)
+            if !recipe.steps.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Steps")
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(recipe.steps.prefix(3).enumerated()), id: \.offset) { index, step in
+                            HStack(alignment: .top, spacing: 12) {
+                                Text("\(index + 1)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 24, height: 24)
+                                    .background(KaloTheme.mint)
+                                    .cornerRadius(12)
+                                
+                                Text(step)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .lineLimit(2)
+                                
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(KaloTheme.cardCornerRadius)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+    }
+}
+
+struct MacroRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            Text(value)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(KaloTheme.text)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(8)
+        .background(Color(white: 0.95))
+        .cornerRadius(8)
+    }
+}
+
+#Preview {
+    ImportRecipeView()
+}

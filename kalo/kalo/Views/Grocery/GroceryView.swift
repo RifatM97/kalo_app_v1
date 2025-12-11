@@ -1,0 +1,277 @@
+import SwiftUI
+
+struct GroceryView: View {
+    @State var groceryVM: GroceryViewModel
+    @State var plannerVM: PlannerViewModel
+    @State private var showAddItemSheet = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Grocery List")
+                        .font(.system(size: 28, weight: .bold))
+                    
+                    HStack {
+                        Text("\(groceryVM.groceryItems.count) items")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        if groceryVM.checkedCount > 0 {
+                            Text("✓ \(groceryVM.checkedCount) checked")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.kaloMint)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(KaloTheme.padding)
+                
+                // Search
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Search items", text: $groceryVM.searchText)
+                        .textFieldStyle(.plain)
+                }
+                .padding(10)
+                .background(Color(white: 0.97))
+                .cornerRadius(10)
+                .padding(.horizontal, KaloTheme.padding)
+                
+                // Items List
+                if groceryVM.filteredItems.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "cart")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No Items")
+                            .font(.system(size: 18, weight: .semibold))
+                        
+                        Text("Generate from meal planner")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .padding(KaloTheme.padding)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 8) {
+                            ForEach(groceryVM.filteredItems) { item in
+                                GroceryItemRow(
+                                    item: item,
+                                    onToggle: { groceryVM.toggleItem(item) },
+                                    onDelete: { groceryVM.removeItem(item) }
+                                )
+                            }
+                        }
+                        .padding(KaloTheme.padding)
+                    }
+                }
+                
+                Spacer()
+                
+                // Action Buttons
+                VStack(spacing: 10) {
+                    if groceryVM.checkedCount > 0 {
+                        Button(action: { groceryVM.clearCheckedItems() }) {
+                            Text("Clear ✓ Items")
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                                .background(Color.red.opacity(0.1))
+                                .foregroundColor(.red)
+                                .cornerRadius(10)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    
+                    Button(action: { showAddItemSheet = true }) {
+                        Text("Add Item")
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(KaloTheme.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                            .fontWeight(.semibold)
+                    }
+                }
+                .padding(KaloTheme.padding)
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: {
+                        groceryVM.generateFromPlanner(plannerVM.weekDays)
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddItemSheet) {
+                AddGroceryItemSheet(groceryVM: groceryVM)
+            }
+        }
+    }
+}
+
+struct GroceryItemRow: View {
+    let item: GroceryItem
+    let onToggle: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onToggle) {
+                Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(item.isChecked ? .kaloMint : .secondary)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(item.isChecked ? .secondary : .kaloText)
+                    .strikethrough(item.isChecked)
+                
+                Text(item.quantity + " " + item.unit)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Button(action: onDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(KaloTheme.text)
+                    .opacity(0.5)
+            }
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+    }
+}
+
+struct AddGroceryItemSheet: View {
+    let groceryVM: GroceryViewModel
+    @State private var itemName = ""
+    @State private var itemQuantity = "1"
+    @State private var itemUnit = "pcs"
+    @State private var showBarcodeScanner = false
+    @State private var barcodeScannerVM = BarcodeScannerViewModel()
+    @Environment(\.dismiss) var dismiss
+    
+    let units = ["pcs", "g", "kg", "ml", "l", "cup", "tbsp", "tsp", "lb", "oz"]
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                VStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Item Name")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        
+                        TextField("e.g., Chicken breast", text: $itemName)
+                            .padding(10)
+                            .background(Color(white: 0.97))
+                            .cornerRadius(8)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Quantity")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            
+                            TextField("1", text: $itemQuantity)
+                                #if os(iOS)
+                                .keyboardType(.decimalPad)
+                                #endif
+                                .padding(10)
+                                .background(Color(white: 0.97))
+                                .cornerRadius(8)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Unit")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            
+                            Picker("Unit", selection: $itemUnit) {
+                                ForEach(units, id: \.self) { unit in
+                                    Text(unit).tag(unit)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .padding(10)
+                            .background(Color(white: 0.97))
+                            .cornerRadius(8)
+                        }
+                    }
+                    
+                    // Barcode Scanner Button
+                    Button(action: { showBarcodeScanner = true }) {
+                        HStack {
+                            Image(systemName: "barcode.viewfinder")
+                            Text("Scan Barcode")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(10)
+                        .background(KaloTheme.mint.opacity(0.1))
+                        .foregroundColor(KaloTheme.mint)
+                        .cornerRadius(8)
+                        .font(.system(size: 13, weight: .semibold))
+                    }
+                }
+                .padding(KaloTheme.padding)
+                
+                Spacer()
+                
+                Button(action: {
+                    if !itemName.isEmpty {
+                        groceryVM.addItem(name: itemName, quantity: itemQuantity, unit: itemUnit)
+                        dismiss()
+                    }
+                }) {
+                    Text("Add Item")
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(KaloTheme.mint)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                        .fontWeight(.semibold)
+                }
+                .disabled(itemName.isEmpty)
+                .padding(KaloTheme.padding)
+            }
+            .navigationTitle("Add Item")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerView()
+            }
+        }
+    }
+}
+
+#Preview {
+    GroceryView(
+        groceryVM: GroceryViewModel(),
+        plannerVM: PlannerViewModel()
+    )
+}

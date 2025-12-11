@@ -1,0 +1,184 @@
+import SwiftUI
+
+struct RecipeExtractionView: View {
+    @State private var viewModel = RecipeExtractionViewModel()
+    @FocusState private var isInputFocused: Bool
+    
+    var body: some View {
+        ZStack {
+            Color.gray.opacity(0.15).ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "video.badge.plus")
+                            .font(.title3)
+                            .foregroundColor(KaloTheme.mint)
+                        
+                        Text("Extract Recipe")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.black)
+                        Spacer()
+                    }
+                    .padding(16)
+                }
+                .background(Color.white)
+                .border(width: 1, edges: [.bottom], color: KaloTheme.divider)
+                
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Input Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Video URL")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.black)
+                            
+                            HStack {
+                                TextField("Paste TikTok, Instagram, or YouTube URL", text: $viewModel.videoURL)
+                                    .textFieldStyle(.roundedBorder)
+                                    .focused($isInputFocused)
+                                    .disabled(viewModel.isExtracting)
+                                
+                                if !viewModel.videoURL.isEmpty {
+                                    Button(action: { viewModel.videoURL = "" }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            if let error = viewModel.error {
+                                Text(error)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red)
+                        }
+                        .padding(16)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        // Extract Button
+                        Button(action: {
+                            Task {
+                                await viewModel.extractRecipe(from: viewModel.videoURL)
+                        }) {
+                                if viewModel.isExtracting {
+                                    ProgressView()
+                                        .progressViewStyle(.circular)
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "wand.and.stars")
+                                Text(viewModel.isExtracting ? "Extracting..." : "Extract Recipe")
+                                    .font(.system(size: 14, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(KaloTheme.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        .disabled(viewModel.videoURL.isEmpty || viewModel.isExtracting)
+                        .padding(.top, 8)
+                        // Progress
+                        if !viewModel.extractionProgress.isEmpty {
+                            Text(viewModel.extractionProgress)
+                                .font(.system(size: 12))
+                                .foregroundColor(.gray)
+                                .padding(16)
+                        // Extracted Recipe
+                        if let recipe = viewModel.extractedRecipe {
+                            RecipeExtractedCard(recipe: recipe)
+                                .padding(.top, 8)
+                    .padding(.vertical, 16)
+            }
+        }
+        .navigationTitle("")
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+    }
+}
+// MARK: - Extracted Recipe Card
+struct RecipeExtractedCard: View {
+    let recipe: RecipeExtractionResponse
+    @State private var isSaved = false
+        VStack(alignment: .leading, spacing: 12) {
+            // Title & Save Button
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(recipe.title ?? "Recipe")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.black)
+                    
+                    if let difficulty = recipe.difficulty {
+                        Text("Difficulty: \(difficulty)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                Spacer()
+                Button(action: { isSaved.toggle() }) {
+                    Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 16))
+                        .foregroundColor(isSaved ? KaloTheme.mint : .gray)
+            Divider()
+            // Metadata
+            HStack(spacing: 16) {
+                if let cookTime = recipe.cookTimeMinutes {
+                    VStack(alignment: .center, spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 14))
+                        Text("\(cookTime)m")
+                            .font(.system(size: 12, weight: .semibold))
+                if let servings = recipe.servings {
+                        Image(systemName: "person.2")
+                        Text("\(servings)")
+            // Macros
+            if let macros = recipe.macros {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Nutrition (per serving)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.gray)
+                    HStack(spacing: 12) {
+                        MacroWidget(label: "Cal", value: Int(macros.calories ?? 0), color: KaloTheme.mint)
+                        MacroWidget(label: "P", value: Int(macros.protein ?? 0), color: .orange)
+                        MacroWidget(label: "C", value: Int(macros.carbs ?? 0), color: .blue)
+                        MacroWidget(label: "F", value: Int(macros.fat ?? 0), color: .red)
+                .padding(.vertical, 8)
+            // Ingredients
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ingredients")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.gray)
+                ForEach(recipe.ingredients ?? [], id: \.id) { ingredient in
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(KaloTheme.mint)
+                            .frame(width: 4, height: 4)
+                        Text(ingredient.name)
+                        if let quantity = ingredient.quantity, let unit = ingredient.unit {
+                            Text("(\(String(format: "%.1f", quantity)) \(unit))")
+                                .font(.system(size: 11))
+            // Steps
+                Text("Steps")
+                ForEach(recipe.steps ?? [], id: \.id) { step in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(step.step)")
+                            .frame(width: 20)
+                        Text(step.instruction)
+                            .lineLimit(nil)
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(12)
+// MARK: - Macro Widget
+struct MacroWidget: View {
+    let label: String
+    let value: Int
+    let color: Color
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundColor(.gray)
+        .frame(width: 50)
+        .padding(6)
+        .background(color.opacity(0.1))
+        .cornerRadius(6)
+#Preview {
+    RecipeExtractionView()

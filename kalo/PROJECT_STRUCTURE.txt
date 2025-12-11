@@ -1,0 +1,175 @@
+KALO iOS APP - COMPLETE DIRECTORY STRUCTURE
+==============================================
+
+kalo/
+├── 📄 README.md                          [Main documentation]
+├── 📄 SETUP_COMPLETE.md                  [This setup guide]
+├── 📄 Config.swift                       [API URLs & theme colors]
+├── 📄 KaloApp.swift                      [App entry point]
+├── 📄 kalo.entitlements                  [App permissions]
+│
+├── 📁 Models/                            [Data structures]
+│   ├── User.swift                        [User & auth models]
+│   ├── Recipe.swift                      [Recipe with macros]
+│   ├── Ingredient.swift                  [Individual ingredients]
+│   ├── Macro.swift                       [Protein/Carbs/Fat]
+│   ├── PlannerDay.swift                  [Weekly meal planning]
+│   └── Workout.swift                     [Exercise tracking]
+│
+├── 📁 Services/                          [Networking & storage]
+│   ├── NetworkingService.swift           [async/await API client]
+│   └── KeychainHelper.swift              [Secure token storage]
+│
+├── 📁 ViewModels/                        [@Observable state management]
+│   ├── AuthViewModel.swift               [Login/Signup logic]
+│   ├── HomeViewModel.swift               [Daily dashboard]
+│   ├── RecipeViewModel.swift             [Recipe CRUD]
+│   ├── ImportRecipeViewModel.swift       [URL extraction]
+│   ├── PlannerViewModel.swift            [Meal assignment]
+│   ├── GroceryViewModel.swift            [Grocery list]
+│   └── WorkoutViewModel.swift            [Workout logging]
+│
+├── 📁 Views/                             [SwiftUI screens]
+│   ├── RootView.swift                    [Auth router]
+│   ├── TabRootView.swift                 [Main tab navigation]
+│   │
+│   ├── 📁 Auth/
+│   │   ├── LoginView.swift               [Email/password login]
+│   │   └── SignupView.swift              [New account creation]
+│   │
+│   ├── 📁 Home/
+│   │   └── HomeView.swift                [Daily calorie summary]
+│   │
+│   ├── 📁 Recipes/
+│   │   ├── RecipeListView.swift          [Browse & search]
+│   │   ├── RecipeDetailView.swift        [Full recipe details]
+│   │   └── ImportRecipeView.swift        [URL extraction UI]
+│   │
+│   ├── 📁 Planner/
+│   │   └── PlannerView.swift             [7-day meal planner]
+│   │
+│   ├── 📁 Grocery/
+│   │   └── GroceryView.swift             [Shopping list]
+│   │
+│   ├── 📁 Workouts/
+│   │   └── WorkoutView.swift             [Exercise logger]
+│   │
+│   └── 📁 Components/
+│       ├── KaloButton.swift              [Mint button style]
+│       └── CardModifier.swift            [Card styling]
+│
+├── 📁 Extensions/
+│   └── Color+Kalo.swift                  [Theme colors]
+│
+├── 📁 Assets.xcassets/
+│   ├── AccentColor.colorset/
+│   └── AppIcon.appiconset/
+│
+├── 📁 Preview Content/
+│   └── Preview Assets.xcassets/
+│
+└── kalo.xcodeproj/                       [Xcode project file]
+    ├── project.pbxproj
+    └── project.xcworkspace/
+
+
+KEY FEATURES IMPLEMENTED
+========================
+
+✅ Authentication
+   - Login with email/password
+   - Create new accounts
+   - Keychain secure token storage
+   - JWT injection in API calls
+
+✅ Home Dashboard
+   - Daily calorie tracking (progress bar)
+   - Macro summary (protein/carbs/fat)
+   - Quick action buttons
+
+✅ Recipe Management
+   - Browse saved recipes
+   - Search & filter
+   - Import from TikTok/Instagram URLs
+   - Full recipe details with steps
+
+✅ Meal Planner
+   - 7-day horizontal scroll view
+   - 3 meals per day (breakfast/lunch/dinner)
+   - Assign recipes to meal slots
+   - Daily calorie calculation
+
+✅ Grocery List
+   - Auto-generated from meal plan
+   - Checkbox to mark items purchased
+   - Add custom items
+   - Search & filter
+
+✅ Workout Logger
+   - Log exercises with sets/reps/weight
+   - Track duration and notes
+   - View workout history
+   - Quick delete functionality
+
+✅ Design System
+   - Mint green theme (#4BE3C1)
+   - Apple HIG compliant
+   - Smooth animations
+   - Native iOS components
+
+
+THEME COLORS
+============
+
+Primary (Mint):    RGB(75, 227, 193)     #4BE3C1
+Background:        RGB(255, 255, 255)   #FFFFFF
+Text:              RGB(26, 26, 26)      #1A1A1A
+Divider:           RGB(237, 237, 237)   #EDEDED
+Button Radius:     12pt
+Card Radius:       16pt
+
+
+QUICK COMMANDS
+==============
+
+Open in Xcode:
+$ cd /Users/arafathossain/Documents/kalo/kalo
+$ open kalo.xcodeproj
+
+Clean Build:
+$ xcodebuild clean -scheme kalo
+
+Build for Simulator:
+$ xcodebuild -scheme kalo -destination 'generic/platform=iOS Simulator' build
+
+Run in Simulator (via Xcode GUI):
+- Select iPhone 15 Pro simulator
+- Press Cmd+R or click Play button
+
+
+NEXT STEPS
+==========
+
+1. ✅ Open kalo.xcodeproj in Xcode
+2. ✅ Select iPhone simulator (iPhone 15 Pro or later)
+3. ✅ Press Cmd+R to build & run
+4. ✅ Test all 5 tabs with mock data
+5. ✅ Replace mock API calls with your backend URLs
+6. ✅ Update Config.swift with your base API URL
+7. ✅ Deploy to TestFlight or App Store
+
+
+SUPPORT
+=======
+
+For questions, refer to:
+- README.md - Full documentation
+- Code comments in each file
+- SwiftUI official docs
+- SETUP_COMPLETE.md - Troubleshooting guide
+
+
+Built with ❤️ using SwiftUI
+Version 1.0.0
+iOS 16.0+
+Xcode 15.0+

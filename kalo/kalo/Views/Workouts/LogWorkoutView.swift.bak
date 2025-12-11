@@ -1,0 +1,203 @@
+import SwiftUI
+
+/// Enhanced workout logging view with PR detection, haptic feedback, and real-time validation
+struct LogWorkoutView: View {
+    @State var workoutVM: WorkoutViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var exerciseName = ""
+    @State private var sets = "3"
+    @State private var reps = "8"
+    @State private var weight = ""
+    @State private var duration = ""
+    @State private var notes = ""
+    @State private var showPRAnimation = false
+    var isPotentialPR: Bool {
+        let weightVal = Double(weight) ?? 0
+        let repsVal = Int(reps) ?? 0
+        return !exerciseName.isEmpty && workoutVM.isNewPR(exerciseName: exerciseName, weight: weightVal > 0 ? weightVal : nil, reps: repsVal)
+    }
+    var isFormValid: Bool {
+        !exerciseName.isEmpty && !sets.isEmpty && !reps.isEmpty
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.gray.opacity(0.15)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Log Workout")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(KaloTheme.text)
+                        
+                        Text("Track your exercise")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.white)
+                    
+                    // Form
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // PR Badge (Animated)
+                            if isPotentialPR {
+                                VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "star.fill")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(KaloTheme.mint)
+                                        
+                                        Text("Potential Personal Record!")
+                                        Spacer()
+                                    }
+                                    
+                                    if let prData = workoutVM.personalRecords[exerciseName.lowercased()] {
+                                        Text("Current PR: \(Int(prData.maxWeight)) lbs × \(prData.maxReps) reps")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                                .background(KaloTheme.mint.opacity(0.1))
+                                .cornerRadius(10)
+                                .transition(.scale.combined(with: .opacity))
+                            }
+                            
+                            // Exercise Section
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Exercise Details")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Exercise Name *")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(KaloTheme.text)
+                                    TextField("e.g., Bench Press", text: $exerciseName)
+                                        .padding(12)
+                                        .background(Color.white)
+                                        .cornerRadius(10)
+                                // Sets, Reps, Weight Grid
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Sets *")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(KaloTheme.text)
+                                        TextField("3", text: $sets)
+                                            .keyboardType(.numberPad)
+                                            .padding(12)
+                                            .background(Color.white)
+                                            .cornerRadius(10)
+                                        Text("Reps *")
+                                        TextField("8", text: $reps)
+                                        Text("Weight (lbs)")
+                                        TextField("Optional", text: $weight)
+                                            .keyboardType(.decimalPad)
+                            .padding(16)
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            // Optional Details Section
+                                Text("Optional Details")
+                                    Text("Duration (minutes)")
+                                    TextField("e.g., 45", text: $duration)
+                                        .keyboardType(.numberPad)
+                                    Text("Notes")
+                                    TextField("How did it feel?", text: $notes, axis: .vertical)
+                                        .lineLimit(3...5)
+                            // Stats Preview (if weight entered)
+                            if let weightVal = Double(weight), weightVal > 0, let setsVal = Int(sets), let repsVal = Int(reps) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Stats Preview")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 12) {
+                                        WorkoutStatBox(
+                                            title: "Volume",
+                                            value: "\(Int(weightVal * Double(setsVal * repsVal)))",
+                                            unit: "lbs"
+                                        )
+                                        if let estimatedOneRM = workoutVM.estimatedOneRM(weight: weightVal, reps: repsVal) {
+                                            WorkoutStatBox(
+                                                title: "Est. 1RM",
+                                                value: "\(Int(estimatedOneRM))",
+                                                unit: "lbs"
+                                            )
+                                        }
+                                .padding(16)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                        }
+                        .padding(16)
+                    // Save Button
+                    VStack(spacing: 8) {
+                        Button(action: saveWorkout) {
+                            HStack {
+                                Image(systemName: isPotentialPR ? "star.fill" : "checkmark.circle.fill")
+                                Text(isPotentialPR ? "Save PR Workout" : "Save Workout")
+                            .frame(maxWidth: .infinity)
+                            .padding(14)
+                            .background(isPotentialPR ? Color(red: 1.0, green: 0.8, blue: 0.0) : KaloTheme.mint)
+                            .foregroundColor(.white)
+                            .font(.system(size: 16, weight: .semibold))
+                        .disabled(!isFormValid)
+                        .opacity(isFormValid ? 1.0 : 0.6)
+                        if !workoutVM.error.isEmpty {
+                            Text(workoutVM.error)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.red)
+                }
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(KaloTheme.mint)
+        }
+    private func saveWorkout() {
+        workoutVM.addWorkout(
+            exerciseName: exerciseName,
+            sets: Int(sets) ?? 0,
+            reps: Int(reps) ?? 0,
+            weight: Double(weight),
+            duration: Int(duration),
+            notes: notes.isEmpty ? nil : notes
+        )
+        
+        // Show PR animation if applicable
+        if isPotentialPR {
+            showPRAnimation = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                dismiss()
+        } else {
+            dismiss()
+}
+/// Reusable stat display box
+struct WorkoutStatBox: View {
+    let title: String
+    let value: String
+    let unit: String
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(KaloTheme.text)
+                Text(unit)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(12)
+        .background(Color.gray.opacity(0.15))
+        .cornerRadius(8)
+#Preview {
+    LogWorkoutView(workoutVM: WorkoutViewModel())

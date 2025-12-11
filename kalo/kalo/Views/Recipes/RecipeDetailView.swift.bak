@@ -1,0 +1,130 @@
+import SwiftUI
+
+struct RecipeDetailView: View {
+    let recipe: Recipe
+    @State private var showAddToMealSheet = false
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Recipe Image Placeholder
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(KaloTheme.mint.opacity(0.15))
+                        .frame(height: 200)
+                        .overlay {
+                            Image(systemName: "fork.knife")
+                                .font(.system(size: 48))
+                                .foregroundColor(KaloTheme.mint)
+                        }
+                    
+                    // Title & Quick Stats
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(recipe.title)
+                            .font(.system(size: 28, weight: .bold))
+                        
+                        if let description = recipe.description {
+                            Text(description)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        // Calorie & Macro Bar
+                        HStack(spacing: 12) {
+                            Label(String(format: "%.0f", recipe.calories), systemImage: "flame.fill")
+                                .foregroundColor(.orange)
+                            
+                            Divider()
+                            Label(String(format: "%.0fg", recipe.macros.protein), systemImage: "p.circle.fill")
+                                .foregroundColor(.kaloMint)
+                            Label(String(format: "%.0fg", recipe.macros.carbs), systemImage: "c.circle.fill")
+                            Label(String(format: "%.0fg", recipe.macros.fat), systemImage: "f.circle.fill")
+                                .foregroundColor(.red)
+                        .padding(12)
+                        .background(Color(white: 0.95))
+                        .cornerRadius(10)
+                    }
+                    // Macro Cards
+                    HStack(spacing: 12) {
+                        MacroDetailCard(label: "Protein", value: String(format: "%.0f", recipe.macros.protein) + "g", color: .kaloMint)
+                        MacroDetailCard(label: "Carbs", value: String(format: "%.0f", recipe.macros.carbs) + "g", color: .orange)
+                        MacroDetailCard(label: "Fat", value: String(format: "%.0f", recipe.macros.fat) + "g", color: .red)
+                    // Ingredients
+                        Text("Ingredients")
+                            .font(.system(size: 18, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(recipe.ingredients, id: \.id) { ingredient in
+                                HStack(spacing: 12) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.kaloMint)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(ingredient.name)
+                                            .font(.system(size: 15, weight: .medium))
+                                        
+                                        HStack(spacing: 8) {
+                                            Text(ingredient.quantity + " " + ingredient.unit)
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundColor(.secondary)
+                                            
+                                            Text("•")
+                                            Text(String(format: "%.0f cal", ingredient.calories))
+                                        }
+                                    }
+                                    Spacer()
+                                }
+                                .padding(10)
+                                .background(Color(white: 0.97))
+                                .cornerRadius(8)
+                            }
+                    // Steps
+                    if !recipe.steps.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Instructions")
+                                .font(.system(size: 18, weight: .bold))
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
+                                    HStack(alignment: .top, spacing: 12) {
+                                        Text("\(index + 1)")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .frame(width: 28, height: 28)
+                                            .background(KaloTheme.mint)
+                                            .cornerRadius(14)
+                                        Text(step)
+                                            .lineLimit(nil)
+                                        Spacer()
+                    Spacer()
+                }
+                .padding(KaloTheme.padding)
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showAddToMealSheet = true }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.kaloMint)
+                    }
+                }
+            }
+        }
+    }
+}
+struct MacroDetailCard: View {
+    let label: String
+    let value: String
+    let color: Color
+        VStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(color)
+        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(color.opacity(0.08))
+        .cornerRadius(12)
+#Preview {
+    RecipeDetailView(recipe: Recipe.mock)

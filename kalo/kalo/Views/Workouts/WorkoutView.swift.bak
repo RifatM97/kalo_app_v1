@@ -1,0 +1,185 @@
+import SwiftUI
+
+struct WorkoutView: View {
+    @State var workoutVM: WorkoutViewModel
+    @State private var showAddSheet = false
+    
+    var totalVolume: Int {
+        Int(workoutVM.workouts.reduce(0) { total, workout in
+            let weight = workout.weight ?? 0
+            return total + Double(workout.sets * workout.reps) * weight
+        })
+    }
+    var exerciseCount: Int {
+        Set(workoutVM.workouts.map { $0.exerciseName }).count
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.gray.opacity(0.15)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // MARK: - Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Workouts")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(KaloTheme.text)
+                        
+                        HStack(spacing: 12) {
+                            Image(systemName: "dumbbell")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(KaloTheme.mint)
+                            
+                            Text("\(workoutVM.workouts.count) workouts • Track your training")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.white)
+                    
+                    if workoutVM.workouts.isEmpty {
+                        VStack(spacing: 16) {
+                                .font(.system(size: 48))
+                            Text("No Workouts Yet")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(KaloTheme.text)
+                            Text("Start logging your exercises")
+                        .frame(maxHeight: .infinity)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 12) {
+                                    StatSummaryCard(title: "Total Volume", value: "\(totalVolume)", unit: "lbs", icon: "sum", color: KaloTheme.mint)
+                                    StatSummaryCard(title: "Exercises", value: "\(exerciseCount)", unit: "types", icon: "square.grid.2x2", color: Color(red: 1.0, green: 0.8, blue: 0.0))
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Recent Workouts")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(KaloTheme.text)
+                                        
+                                        Spacer()
+                                        NavigationLink(destination: WorkoutHistoryView(workoutVM: workoutVM)) {
+                                            Text("See All")
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundColor(KaloTheme.mint)
+                                        }
+                                    }
+                                    
+                                    VStack(spacing: 8) {
+                                        ForEach(workoutVM.workouts.prefix(5), id: \.id) { workout in
+                                            let isRecord = workoutVM.personalRecords[workout.exerciseName.lowercased()]?.maxWeight == workout.weight
+                                            
+                                            NavigationLink(destination: WorkoutDetailView(workoutVM: workoutVM, workout: workout)) {
+                                                WorkoutQuickCard(workout: workout, isPersonalRecord: isRecord)
+                                            }
+                                if !workoutVM.personalRecords.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Personal Records")
+                                        VStack(spacing: 8) {
+                                            ForEach(Array(workoutVM.personalRecords.values).prefix(3), id: \.exerciseName) { pr in
+                                                PRHighlightCard(pr: pr)
+                            }
+                            .padding(16)
+                    HStack(spacing: 12) {
+                        Button(action: { showAddSheet = true }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Log Workout")
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(KaloTheme.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .font(.system(size: 15, weight: .semibold))
+                        NavigationLink(destination: WorkoutHistoryView(workoutVM: workoutVM)) {
+                                Image(systemName: "list.bullet")
+                                Text("History")
+                            .background(Color.white)
+                            .foregroundColor(KaloTheme.mint)
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(KaloTheme.mint, lineWidth: 1.5))
+                }
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .sheet(isPresented: $showAddSheet) {
+                LogWorkoutView(workoutVM: workoutVM)
+        }
+}
+struct StatSummaryCard: View {
+    let title: String
+    let value: String
+    let unit: String
+    let icon: String
+    let color: Color
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(color)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+            
+            HStack(alignment: .lastTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(KaloTheme.text)
+                Text(unit)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(color.opacity(0.08))
+        .cornerRadius(10)
+struct WorkoutQuickCard: View {
+    let workout: Workout
+    let isPersonalRecord: Bool
+        HStack(spacing: 10) {
+            Image(systemName: "dumbbell")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(isPersonalRecord ? Color(red: 1.0, green: 0.8, blue: 0.0) : KaloTheme.mint)
+                .cornerRadius(8)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(workout.exerciseName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(KaloTheme.text)
+                    if isPersonalRecord {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.0))
+                Text("\(workout.sets)×\(workout.reps) @ \(workout.weight.map { "\(Int($0)) lbs" } ?? "BW")")
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(workout.date.formatted(date: .omitted, time: .shortened))
+                Text(workout.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 11, weight: .medium))
+        .padding(10)
+        .background(Color.white)
+struct PRHighlightCard: View {
+    let pr: ExercisePR
+        HStack(spacing: 12) {
+            Image(systemName: "crown.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.0))
+                .frame(width: 40, height: 40)
+                .background(Color(red: 1.0, green: 0.8, blue: 0.0).opacity(0.1))
+                .cornerRadius(10)
+                Text(pr.exerciseName)
+                    .font(.system(size: 14, weight: .semibold))
+                Text("\(Int(pr.maxWeight)) lbs × \(pr.maxReps) reps")
+                Text(pr.prDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(KaloTheme.mint)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(KaloTheme.mint.opacity(0.1))
+                    .cornerRadius(4)
+#Preview {
+    WorkoutView(workoutVM: WorkoutViewModel())

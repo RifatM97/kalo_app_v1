@@ -1,0 +1,210 @@
+import SwiftUI
+
+struct PlannerView: View {
+    @State var plannerVM: PlannerViewModel
+    @State var recipeVM: RecipeViewModel
+    @State private var selectedDay: PlannerDay?
+    @State private var selectedSlot: MealSlot?
+    @State private var showRecipeSheet = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                // Header
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Meal Planner")
+                        .font(.system(size: 28, weight: .bold))
+                    
+                    Text("Plan your week")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(KaloTheme.padding)
+                
+                // Weekly Days Scroll
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(plannerVM.weekDays, id: \.id) { day in
+                            DayColumnView(
+                                day: day,
+                                isSelected: selectedDay?.id == day.id,
+                                onSelect: { selectedDay = day },
+                                onMealTap: { slot in
+                                    selectedSlot = slot
+                                    showRecipeSheet = true
+                                }
+                            )
+                        }
+                    }
+                    .padding(KaloTheme.padding)
+                }
+                
+                Spacer()
+            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .sheet(isPresented: $showRecipeSheet) {
+                if let day = selectedDay, let slot = selectedSlot {
+                    MealSelectorSheet(
+                        plannerVM: plannerVM,
+                        recipeVM: recipeVM,
+                        day: day,
+                        slot: slot
+                    )
+                }
+            }
+        }
+    }
+}
+
+struct DayColumnView: View {
+    let day: PlannerDay
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onMealTap: (MealSlot) -> Void
+    
+    var dayName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: day.date)
+    }
+    
+    var dayNumber: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: day.date)
+    }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Day Header
+            VStack(spacing: 2) {
+                Text(dayName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                Text(dayNumber)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(KaloTheme.text)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(8)
+            .background(isSelected ? KaloTheme.mint.opacity(0.1) : Color(white: 0.97))
+            .cornerRadius(8)
+            .onTapGesture { onSelect() }
+            
+            // Meal Slots
+            VStack(spacing: 6) {
+                ForEach(day.slots, id: \.id) { slot in
+                    MealSlotView(
+                        slot: slot,
+                        onTap: { onMealTap(slot) }
+                    )
+                }
+            }
+        }
+        .frame(width: 100)
+        .padding(8)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
+struct MealSlotView: View {
+    let slot: MealSlot
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 4) {
+                if let recipe = slot.recipe {
+                    VStack(spacing: 2) {
+                        Text(recipe.title)
+                            .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(2)
+                            .foregroundColor(KaloTheme.text)
+                        
+                        Text(String(format: "%.0f cal", recipe.calories))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    VStack(spacing: 2) {
+                        Text(slot.mealType.displayName)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(KaloTheme.mint)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(6)
+            .background(slot.recipe != nil ? KaloTheme.mint.opacity(0.1) : Color(white: 0.95))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct MealSelectorSheet: View {
+    let plannerVM: PlannerViewModel
+    let recipeVM: RecipeViewModel
+    let day: PlannerDay
+    let slot: MealSlot
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                Text("Select Recipe for \(slot.mealType.displayName)")
+                    .font(.system(size: 18, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(KaloTheme.padding)
+                
+                // Recipe List
+                List(recipeVM.recipes, id: \.id) { recipe in
+                    Button(action: {
+                        plannerVM.assignRecipe(recipe, to: slot, onDay: day)
+                        dismiss()
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(recipe.title)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Text(String(format: "%.0f cal", recipe.calories))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "checkmark.circle")
+                                .foregroundColor(.kaloMint)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+#Preview {
+    PlannerView(
+        plannerVM: PlannerViewModel(),
+        recipeVM: RecipeViewModel()
+    )
+}
