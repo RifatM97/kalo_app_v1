@@ -62,7 +62,7 @@ cp .env.example .env
 Analyze a YouTube Shorts video:
 
 ```bash
-uv run python -m recipe_analyzer.app "https://youtube.com/shorts/abc123"
+uv run python -m recipe_analyzer.app "https://www.youtube.com/shorts/nsdlYMDpXbU"
 ```
 
 With custom servings:

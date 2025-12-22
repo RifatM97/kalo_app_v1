@@ -35,14 +35,14 @@ logger = logging.getLogger(__name__)
 # Create orchestrator agent with sub-agents
 orchestrator_agent = Agent(
     name="recipe_orchestrator",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     description="Orchestrates the complete recipe analysis workflow from YouTube URL to formatted recipe card.",
-    instruction="""
+    instruction=f"""
     You are the orchestrator for a YouTube recipe analyzer system.
 
     Your workflow:
     1. Delegate to video_analyzer to extract recipe information from the input video url
-    2. Delegate to recipe_formatter to structure the raw data into a clean recipe card
+    2. Delegate to recipe_formatter and use the recipe analysis instructions from "{video_analyzer_agent}" to structure the raw data into a clean recipe card
     3. Delegate to nutrition_calculator to compute nutritional information per serving
     4. Combine all results into a final recipe card with nutrition data
 

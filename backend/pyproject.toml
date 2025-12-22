@@ -13,5 +13,4 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "httpx>=0.25.0",
     "requests>=2.31.0",
-    "google-cloud-aiplatform[adk]>=1.70.0",
 ]

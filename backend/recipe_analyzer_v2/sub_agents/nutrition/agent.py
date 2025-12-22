@@ -2,7 +2,7 @@
 
 import logging
 from google.adk.agents import Agent
-from ..tools.nutrition_tools import lookup_nutrition_data, calculate_recipe_nutrition
+from ...tools.nutrition_tools import lookup_nutrition_data, calculate_recipe_nutrition
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def get_ingredient_nutrition_info(ingredient_name: str, quantity: float = 100.0,
 # Create nutrition calculator agent
 nutrition_calculator_agent = Agent(
     name="nutrition_calculator",
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-flash",
     description="Calculates accurate nutritional information for recipes.",
     instruction="""
     You are a nutrition calculator specialized in recipe analysis.

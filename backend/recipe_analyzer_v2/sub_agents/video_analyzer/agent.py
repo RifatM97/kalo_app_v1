@@ -56,17 +56,6 @@ def analyze_video_with_gemini(video_url: str) -> dict:
 
         Format your response as a structured analysis.
         """
-        # --- ADD THIS WAIT BLOCK ---
-        # print(f"\nFile is ready. State: {video_file.state.name}")
-        # while video_file.state.name == "PROCESSING":
-        #     print('.', end='', flush=True)
-        #     time.sleep(15)
-        #     video_file = client.files.get(name=video_file.name)
-
-        # if video_file.state.name == "FAILED":
-        #     raise ValueError(f"Video processing failed: {video_file.state.name}")
-        # ---------------------------
-        # print(f"File is ready. State: {video_file.state.name}")
 
         # Generate content with video
         logger.info("Analyzing video with Gemini...")
@@ -81,8 +70,7 @@ def analyze_video_with_gemini(video_url: str) -> dict:
                     types.Part(text=prompt)
                         ]
                 )
-
-        )
+            )
 
         analysis_text = response.text
 
@@ -108,8 +96,8 @@ video_analyzer_agent = Agent(
     You are a video analyzer specialized in cooking videos.
 
     Your task is to:
-    1. Take the YouTube Shorts URL as input
-    2. Analyze the video content using Gemini's multimodal capabilities using the analyze_video_with_gemini tool
+    1. Take a YouTube Shorts URL as input. 
+    2. Analyze the video content using Gemini's multimodal capabilities using analyze_video_with_gemini tool
     3. Extract all recipe information including ingredients, steps, timing, and metadata
 
     When analyzing:

@@ -12,13 +12,16 @@ from google.adk import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+from recipe_analyzer.formatters.json_formatter import save_recipe_json
+
 from .agents.orchestrator import orchestrator_agent
 from .tools.youtube_tools import extract_video_id
 
 # TODO: Uncomment when implementing full recipe card output
-# from pathlib import Path
-# from .models.schemas import RecipeCard
-# from .formatters import format_recipe_card, format_nutrition_table, save_recipe_json, save_recipe_markdown
+from pathlib import Path
+from .models.schemas import RecipeCard
+from .formatters.recipe_card_formatter import format_recipe_card, format_nutrition_table
+from .formatters.json_formatter import save_recipe_json, save_recipe_markdown
 
 # Load environment variables
 load_dotenv()
@@ -162,29 +165,29 @@ def main():
         console.print(f"\n{result}")
 
         # Note: In production, you would:
-        # if isinstance(result, RecipeCard):
-        #     # Display recipe card
-        #     if args.format == "terminal":
-        #         format_recipe_card(result, output_format="terminal")
-        #         format_nutrition_table(
-        #             result.nutrition_per_serving.model_dump(),
-        #             servings=result.servings
-        #         )
-        #
-        #     # Save outputs
-        #     if args.output:
-        #         output_path = Path(args.output)
-        #         if output_path.suffix == '.json':
-        #             save_recipe_json(result, output_path)
-        #         elif output_path.suffix == '.md':
-        #             save_recipe_markdown(result, output_path)
-        #         console.print(f"\n[green]Saved to: {output_path}[/green]")
-        #     else:
-        #         # Auto-save
-        #         output_base = Path(args.output_dir) / video_id
-        #         save_recipe_json(result, f"{output_base}_recipe.json")
-        #         save_recipe_markdown(result, f"{output_base}_recipe.md")
-        #         console.print(f"\n[green]Saved to: {output_base}_recipe.{{json,md}}[/green]")
+        if isinstance(result, RecipeCard):
+            # Display recipe card
+            if args.format == "terminal":
+                format_recipe_card(result, output_format="terminal")
+                format_nutrition_table(
+                    result.nutrition_per_serving.model_dump(),
+                    servings=result.servings
+                )
+        
+            # Save outputs
+            if args.output:
+                output_path = Path(args.output)
+                if output_path.suffix == '.json':
+                    save_recipe_json(result, output_path)
+                elif output_path.suffix == '.md':
+                    save_recipe_markdown(result, output_path)
+                console.print(f"\n[green]Saved to: {output_path}[/green]")
+            else:
+                # Auto-save
+                output_base = Path(args.output_dir)
+                save_recipe_json(result, f"{output_base}_recipe.json")
+                save_recipe_markdown(result, f"{output_base}_recipe.md")
+                console.print(f"\n[green]Saved to: {output_base}_recipe.{{json,md}}[/green]")
 
         console.print("\n[bold green]✓ Complete![/bold green]\n")
 
