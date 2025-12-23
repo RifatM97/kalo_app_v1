@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 ### To do: Implement number of servings scaling in ingredient parsing
 
+### to do: number of servings input to the agent - mock function below
+def number_of_servings() -> int:
+    """Number of servings desired by user
+    Returns:
+        Desired number of servings
+    """
+    return 2
+
 
 # Create recipe formatter agent
 recipe_formatter_agent = Agent(
