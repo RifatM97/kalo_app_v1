@@ -4,3 +4,7 @@ __pycache__
 *.pyc
 .env.*
 .env*
+.adk/
+.claude/
+.python-version
+.DS_Store
