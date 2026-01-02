@@ -4,7 +4,7 @@ import logging
 from google.adk.agents import Agent
 from ...tools.nutrition_tools import lookup_nutrition_data, calculate_recipe_nutrition
 from google.adk.tools import google_search
-from ...data.database import user_profile
+from ...data.database import user_profile, users_db
 
 
 logger = logging.getLogger(__name__)
@@ -52,17 +52,21 @@ def get_ingredient_nutrition_info(ingredient_name: str, quantity: float = 100.0,
 
 def get_user_calories(user_name: str) -> int:
     """
-    Mock function to get user's daily calorie needs.
-    In real implementation, fetch from user profile database.
+    Get user's daily calorie needs from the user database.
 
     Args:
-        user_id: Unique user identifier
+        user_name: User's full name
     Returns:
-        Daily calorie needs
+        Daily calorie needs in kcal
     """
-    # Mocked user profile data
-    if user_name == user_profile["name"]:
-        return user_profile["daily_calorie_intake"]
+    # Search for user by name in the database
+    for user_id, user_data in users_db.items():
+        if user_data["name"].lower() == user_name.lower():
+            return user_data["daily_calorie_intake"]
+
+    # Default fallback if user not found
+    logger.warning(f"User '{user_name}' not found in database, using default profile")
+    return user_profile["daily_calorie_intake"]
     
 
 
@@ -74,25 +78,38 @@ nutrition_calculator_agent = Agent(
     instruction="""
     You are a nutrition calculator specialized in recipe analysis.
 
+    Input Processing:
+    1. Parse the input to extract:
+       - Recipe analysis (the main content with ingredients)
+       - User Context section containing "User Name" value
+    2. Use the User Name to fetch personalized calorie information
+    3. If User Name is not found in the input, default to "John Doe"
+
     Your task is to:
     1. Parse the ingredient list from the raw recipe_analysis
     2. Look up nutritional data for each ingredient using the get_ingredient_nutrition_info tool
     3. Compute per-serving nutritional breakdown using the calculate_nutrition_per_serving tool
-    4. Compare total calories against the John Doe's daily needs using get_user_calories tool
-    5. Return a structured nutrition summary, including John Doe's daily calorie comparison.
+    4. Use the User Name from the input to call get_user_calories tool (e.g., get_user_calories("Alice"))
+    5. Compare total calories against the user's daily needs
+    6. Return a structured nutrition summary, including the user's daily calorie comparison
 
-    Required nutrional values to calculate:
+    Required nutritional values to calculate:
     - Calories (kcal)
     - Protein (g)
     - Fat (g)
     - Carbohydrates (g)
+    - Calories percentage of daily needs (calculated from user's daily calorie intake)
 
     Guidelines:
+    - Extract the User Name from the "User Context" section in the input
+    - Call get_user_calories with the extracted user name
     - Provide per-serving calculations based on the recipe servings
+    - Calculate percentage: (calories_per_serving / user_daily_calories) * 100
     - Round values to one decimal place for readability
+    - Include the user's name in your analysis for personalization
 
     Use the calculate_nutrition_per_serving, get_ingredient_nutrition_info tools and get_user_calories tool as needed.
-    Always provide accurate, per-person nutritional information.
+    Always provide accurate, personalized, per-person nutritional information.
     """,
     tools=[get_ingredient_nutrition_info, calculate_nutrition_per_serving, get_user_calories],
     output_key="nutrition_per_serving"

@@ -9,25 +9,36 @@ from .models.schemas import RecipeCardWithNutrition
 
 logger = logging.getLogger(__name__)
 
-# parallel agent : recipee formatter_agent , nutrition_calculator_agent
+# Parallel agent: recipe formatter + nutrition calculator run simultaneously
 parallel_processing_agent = ParallelAgent(
     name="recipe_processing_parallel_agent",
     sub_agents=[recipe_formatter_agent, nutrition_calculator_agent],
     description="Processes recipe data in parallel: formatting recipe card and nutrition calculation."
 )
 
+# Combiner agent: merges parallel outputs into single structure
 combine_parallel = LlmAgent(
-    name="combine_ouputs",
+    name="combine_outputs",
     model="gemini-2.5-flash-lite",
-    instruction="Combines outputs from recipe formatter formatted_recipe_card and nutrition calculator nutrition_per_serving into a single structured output.",
-    output_schema=RecipeCardWithNutrition,
-    ## add output schema if needed : RecipeCard
-    )
+    instruction="""
+    Combine the outputs from the recipe formatter (formatted_recipe_card) and
+    nutrition calculator (nutrition_per_serving) into a single RecipeCardWithNutrition object.
 
-# Create sequential agent with sub-agents
+    The formatted_recipe_card contains all recipe details (title, ingredients, steps, etc.).
+    The nutrition_per_serving contains nutritional information.
+
+    Merge them by taking all fields from formatted_recipe_card and adding the
+    nutrition_per_serving data as the "nutrition" field.
+
+    Return a complete RecipeCardWithNutrition JSON object.
+    """,
+    output_schema=RecipeCardWithNutrition,
+)
+
+# Create sequential workflow: video analysis → parallel processing → combine results
 overall_workflow = SequentialAgent(
     name="recipe_analysis_workflow",
-    sub_agents=[video_analyzer_agent, combine_parallel]
-    )
+    sub_agents=[video_analyzer_agent, parallel_processing_agent, combine_parallel]
+)
 
 root_agent = overall_workflow

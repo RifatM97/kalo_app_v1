@@ -50,9 +50,9 @@ From the `recipe_analyzer_v3` directory:
 ./run_app.sh
 ```
 
-**Option 2: Using uv (if you have uv installed)**
+**Option 2: Using uv (if you have uv installed) - THIS WORKS**
 
-From the `recipe_analyzer_v3` directory:
+From the `recipe_analyzer_v3` directory - **use this one if you are using uv**:
 
 ```bash
 uv run streamlit run app.py
