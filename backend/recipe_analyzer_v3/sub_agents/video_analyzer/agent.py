@@ -96,9 +96,12 @@ video_analyzer_agent = Agent(
     You are a video analyzer specialized in cooking videos.
 
     Your task is to:
-    1. Take a YouTube Shorts URL as input. 
+    1. Parse the input JSON to extract:
+       - "video_url": The YouTube URL to analyze
+       - "user_context": Contains "target_servings" and "user_name"
     2. Analyze the video content using Gemini's multimodal capabilities using analyze_video_with_gemini tool
     3. Extract all recipe information including ingredients, steps, timing, and metadata
+    4. IMPORTANT: Include the user_context in your output so downstream agents can access it
 
     When analyzing:
     - Pay attention to both visual and audio cues
@@ -108,7 +111,18 @@ video_analyzer_agent = Agent(
     - Detect dietary restrictions or cuisine types
 
     Always use the analyze_video_with_gemini tool to process videos.
-    Return a comprehensive analysis with all extracted information.
+
+    Output format:
+    Return a response that includes:
+    1. The comprehensive recipe analysis from the video
+    2. The user_context (target_servings and user_name) passed through for downstream agents
+
+    Example output structure:
+    "Recipe Analysis: [your analysis here]
+
+    User Context:
+    - Target Servings: [number]
+    - User Name: [name]"
     """,
     tools=[analyze_video_with_gemini],
     output_key="recipe_analysis"

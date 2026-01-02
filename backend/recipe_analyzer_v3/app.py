@@ -78,6 +78,14 @@ st.markdown("""
 st.title("🍳 Recipe Analyzer")
 st.markdown("Extract recipes and nutritional information from YouTube cooking videos")
 
+
+# 1. Add Input Widgets
+col1, col2 = st.columns(2)
+with col1:
+    user_name = st.text_input("User Name", value="John Doe")
+with col2:
+    servings = st.number_input("Target Servings", min_value=1, value=2)
+
 # Input section
 youtube_url = st.text_input(
     "Enter YouTube URL",
@@ -93,7 +101,7 @@ if st.button("Analyze Recipe", type="primary"):
         with st.spinner("Analyzing video... This may take a few moments."):
             try:
                 # Run the agent asynchronously
-                async def run_agent(url: str):
+                async def run_agent(url: str, target_servings: int, user: str):
                     session_service = InMemorySessionService()
                     runner = Runner(
                         agent=root_agent,
@@ -108,11 +116,26 @@ if st.button("Analyze Recipe", type="primary"):
                         session_id='streamlit_session'
                     )
 
-                    # Create initial message
+                    # Create a structured prompt dictionary
+                    input_data = {
+                        "video_url": url,
+                        "user_context": {
+                            "target_servings": target_servings,
+                            "user_name": user
+                        }
+                    }
+                    
+                    # Convert to JSON string for the agent
                     initial_message = types.Content(
                         role='user',
-                        parts=[types.Part(text=url)]
+                        parts=[types.Part(text=json.dumps(input_data))]
                     )
+
+                    # # Create initial message
+                    # initial_message = types.Content(
+                    #     role='user',
+                    #     parts=[types.Part(text=url)]
+                    # )
 
                     # Run agent and collect response
                     response_content = None
@@ -127,7 +150,7 @@ if st.button("Analyze Recipe", type="primary"):
                     return response_content
 
                 # Execute async function
-                result = asyncio.run(run_agent(youtube_url))
+                result = asyncio.run(run_agent(youtube_url, servings, user_name))
 
                 # Extract the recipe data from the result
                 if result and result.parts:
